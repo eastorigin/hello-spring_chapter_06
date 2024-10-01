@@ -1,7 +1,5 @@
 package com.ktdsuniversity.edu.hello_spring.bbs.service.impl;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,9 +12,20 @@ import com.ktdsuniversity.edu.hello_spring.bbs.vo.BoardListVO;
 import com.ktdsuniversity.edu.hello_spring.bbs.vo.BoardVO;
 import com.ktdsuniversity.edu.hello_spring.bbs.vo.ModifyBoardVO;
 import com.ktdsuniversity.edu.hello_spring.bbs.vo.WriteBoardVO;
+import com.ktdsuniversity.edu.hello_spring.common.beans.FileHandler;
+import com.ktdsuniversity.edu.hello_spring.common.vo.StoreResultVO;
 
 @Service
 public class BoardServiceImpl implements BoardService {
+	
+	// application.yml 파일에서 "app.multipart.base-dir" 설정 값을 가져온다
+	// @Value는 Spring Bean에서만 사용이 가능
+	// Spring Bean: @Controller, @Service, Repository
+	//	@Value("${app.multipart.base-dir}")
+	//	private String baseDirectory;
+
+	@Autowired
+	private FileHandler fileHandler;
 	
 	@Autowired
 	private BoardDao boardDao;
@@ -46,34 +55,11 @@ public class BoardServiceImpl implements BoardService {
 		// 파일 업로드 처리
 		MultipartFile file = writeBoardVO.getFile();
 		
-		// 1. 클라이언트가 파일을 전송했는지 확인.
-		
-		
-		// 2. 클라이언트가 파일을 전송했다면
-		if(file != null && !file.isEmpty()) {
-			// 3. 파일을 서버 컴퓨터의 특정 폴더로 저장시킨다.
-			File uploadFile = new File("C:\\uploadfiles", file.getOriginalFilename());
-			// getOriginalFilename 사용자가 보내준 파일의 이름과 확장자가 들어있음.
-			// c 드라이브의 uploadfiles이라는 폴더에 보내줌.
-			if(!uploadFile.getParentFile().exists()) {
-				uploadFile.getParentFile().mkdirs();
-			}
-			// uploadfiles가 없으면 생성해주는 코드
-			try {
-				file.transferTo(uploadFile);
-			} catch (IllegalStateException | IOException e) {
-				e.printStackTrace();
-				throw new RuntimeException("예기치 못한 이유로 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.");
-			}
-			// 쓰고 있는 디스크의 용량이 꽉찰 때 IOException 발생 혹은 uploadfiles라는 폴더가 없을 때 발생 혹은 허가지되 않은 경로.
-			// 그러나 파일을 생성하기 때문에 폴더 없는 경우는 발생하지 않음.
-			// 일반적으로 윈도우는 C 드라이브 막아놓음.
-			// 보통 이런 식은 checkedExpcetion 보통 할 수 있는게 없기 때문에 예외를 만들어서 던져버림.
-			
-			
-			// 4. 파일의 정보를 데이터베이스에 저장시킨다.
-			writeBoardVO.setOriginFileName(file.getOriginalFilename());
-		}		
+		StoreResultVO storeResultVO = this.fileHandler.storeFile(file);
+		if(storeResultVO != null) {
+			writeBoardVO.setFileName(storeResultVO.getObfuscatedFileName());
+			writeBoardVO.setOriginFileName(storeResultVO.getOriginFilename());
+		}
 		
 		int numberCreation = this.boardDao.inserNewBoard(writeBoardVO);
 		return numberCreation > 0;
@@ -96,13 +82,38 @@ public class BoardServiceImpl implements BoardService {
 	
 	@Override
 	public boolean updateOneBoard(ModifyBoardVO modifyBoardVO) {
+		
+		// 기존의 파일을 삭제하기 위해서 업데이트 하기 전 게시글의 정보를 조회한다
+		BoardVO boardVO = this.boardDao.selectOneBoard(modifyBoardVO.getId());
+		
+		
+		MultipartFile file = modifyBoardVO.getFile();
+		
+		StoreResultVO storeResultVO = this.fileHandler.storeFile(file);
+		if(storeResultVO != null) {
+			modifyBoardVO.setFileName(storeResultVO.getObfuscatedFileName());
+			modifyBoardVO.setOriginFileName(storeResultVO.getOriginFilename());
+		}
+		
 		int updateCount = boardDao.updateOneBoard(modifyBoardVO);
+		
+		if(updateCount > 0) {
+			this.fileHandler.deleteFile(boardVO.getFileName());
+		}
+		
 		return updateCount > 0;
 	}
 	
 	@Override
 	public boolean deleteOneBoard(int id) {
+		// 기존의 파일을 삭제하기 위해서 업데이트 하기 전 게시글의 정보를 조회한다
+		BoardVO boardVO = this.boardDao.selectOneBoard(id);
+		
 		int deleteCount = boardDao.deleteOneBoard(id);
+		
+		if(deleteCount > 0) {
+			this.fileHandler.deleteFile(boardVO.getFileName());
+		}
 		return deleteCount > 0;
 	}
 }

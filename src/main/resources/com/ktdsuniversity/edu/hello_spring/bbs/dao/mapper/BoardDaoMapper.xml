@@ -42,7 +42,7 @@
 	, 0
 	, SYSDATE
 	, SYSDATE
-	, NULL
+	, #{fileName}
 	, #{originFileName})
 	</insert>
 	
@@ -58,8 +58,8 @@
 	 	 , CONTENT
 	 	 , EMAIL
 	 	 , VIEW_CNT
-	 	 , CRT_DT
-	 	 , MDFY_DT
+	 	 , TO_CHAR(CRT_DT, 'YYYY-MM-DD') CRT_DT
+	 	 , TO_CHAR(MDFY_DT, 'YYYY-MM-DD') MDFY_DT
 	 	 , FILE_NAME
 	 	 , ORIGIN_FILE_NAME
   	  FROM BOARD
@@ -72,6 +72,10 @@
    	 	 , CONTENT = #{content}
    	 	 , EMAIL = #{email}
    	 	 , MDFY_DT = SYSDATE
+   	 	 <if test='fileName != null and fileName != ""'>
+   	 	 , FILE_NAME = #{fileName}
+   	 	 , ORIGIN_FILE_NAME = #{originFileName}
+   	 	 </if>
  	 WHERE ID = #{id}
 	</update>
 	

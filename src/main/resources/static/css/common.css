@@ -7,6 +7,10 @@ div.grid {
   row-gap: 10px;
 }
 
+div.grid-view-board {
+  grid-template-rows: repeat(6, 28px) 320px 1fr;
+}
+
 div.grid > div.btn-group {
   display: grid;
   grid-template-columns: 80px 1fr;

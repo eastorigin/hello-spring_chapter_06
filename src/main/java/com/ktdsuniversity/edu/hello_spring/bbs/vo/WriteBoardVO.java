@@ -7,6 +7,7 @@ public class WriteBoardVO {
 	private String subject;
 	private String email;
 	private String content;
+	private String fileName;
 	private String originFileName;
 	private MultipartFile file;
 	
@@ -39,6 +40,12 @@ public class WriteBoardVO {
 	}
 	public void setContent(String content) {
 		this.content = content;
+	}
+	public String getFileName() {
+		return fileName;
+	}
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
 	}
 	
 }
